@@ -24,9 +24,9 @@ pipe.to("cuda")
 app = Flask(__name__)
 run_with_ngrok(app)
 
-app.config['IMAGES_PATH'] = 'image/1688'
-app.config['VIDEO_PATH'] = 'video/1688'
-app.config['UPLOAD_FOLDER'] = 'upload'
+app.config['IMAGES_PATH'] = '../drive/MyDrive/image/1688'
+app.config['VIDEO_PATH'] = '../drive/MyDrive/video/1688'
+app.config['UPLOAD_FOLDER'] = '../drive/MyDrive/upload'
 
 image_orginal_path = os.path.join(app.config['IMAGES_PATH'], f"original")
 rm_text_path = os.path.join(app.config['IMAGES_PATH'], f"rm-text")
