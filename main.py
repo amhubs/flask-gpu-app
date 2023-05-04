@@ -240,6 +240,11 @@ def create_static_text(text, font_size, duration, screen_size, position='top'):
 
     text_clip = text_clip.set_position(text_position)
     return text_clip
+    
+IMAGEMAGICK_BINARY = '/usr/bin/convert'
+
+from moviepy.config import change_settings
+change_settings({"IMAGEMAGICK_BINARY": IMAGEMAGICK_BINARY})
 
 def create_moving_text(title, option_title, option, price, duration, screen_size, text_color='white', bg_color=(0, 0, 0), speed=0.4, padding=1):
     font_path = os.path.join(app.config['FONTS_PATH'], f"th-th/NotoSansThai-Regular.ttf")  # Change this to the path of the SimHei font on your system
@@ -398,9 +403,9 @@ def item_images_info_resize():
     
     background_color    = "000000@0.4"
     
-    images = glob(app.config['IMAGES_PATH'],F"resized/info/{w}-{h}/{item_id}/*jpg")
+    images = glob.glob(os.path.join(app.config['IMAGES_PATH'], f"resized/info/{w}-{h}/{item_id}/*jpg"))
     
-    font_path = "fonts/th-th/NotoSansThai-Regular.ttf"
+    font_path = os.path.join(app.config['FONTS_PATH'], f"th-th/NotoSansThai-Regular.ttf")
    
     for index, image in enumerate(images):
       
@@ -416,6 +421,7 @@ def item_images_info_resize():
         subprocess.run(cmd, shell=True)
         
     return jsonify({'message': 'Resize Images successfully!'})
+
 @app.route('/ffmpeg-mixing-video', methods=['POST']) 
 def mixing_videos(): 
     data = request.json 
