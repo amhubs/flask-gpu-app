@@ -12,6 +12,6 @@ opencv-python
 numpy
 urllib3
 requests
-glob3
+glob3==0.0.1
 moviepy
 concurrent.futures
