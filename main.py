@@ -24,9 +24,10 @@ pipe.to("cuda")
 app = Flask(__name__)
 run_with_ngrok(app)
 
-app.config['IMAGES_PATH'] = '../drive/MyDrive/image/1688'
-app.config['VIDEO_PATH'] = '../drive/MyDrive/video/1688'
-app.config['UPLOAD_FOLDER'] = '../drive/MyDrive/upload'
+app.config['IMAGES_PATH'] = 'drive/MyDrive/image/1688'
+app.config['VIDEO_PATH'] = 'drive/MyDrive/video/1688'
+app.config['UPLOAD_FOLDER'] = 'drive/MyDrive/upload'
+app.config['FONTS_PATH'] = 'drive/MyDrive/fonts'
 
 image_orginal_path = os.path.join(app.config['IMAGES_PATH'], f"original")
 rm_text_path = os.path.join(app.config['IMAGES_PATH'], f"rm-text")
@@ -41,6 +42,7 @@ video_item_resized_path = os.path.join(app.config['VIDEO_PATH'], f"item-resized"
 video_item_noninfo_path = os.path.join(app.config['VIDEO_PATH'], f"noninfo") 
 video_mixed_path = os.path.join(app.config['VIDEO_PATH'], f"mixed")
 video_mixed_musix_path = os.path.join(app.config['VIDEO_PATH'], f"mixed-music")
+
 if not os.path.exists(image_orginal_path):
     os.makedirs(image_orginal_path)
 if not os.path.exists(rm_text_path):
@@ -157,6 +159,7 @@ def download_images_concurrently(urls, folder):
     with ThreadPoolExecutor() as executor:
         image_files = list(executor.map(download_image, urls, range(len(urls)), [folder]*len(urls)))
     return image_files
+
 @app.route('/generate-video', methods=['POST'])
 def generate_video():
     
@@ -174,13 +177,13 @@ def generate_video():
     
     # image_files = download_images_concurrently(images_url)
     
-    base_folder = f"resized/info/{w}-{h}"
+    # base_folder = f"resized/info/{w}-{h}"
 
-    image_path = os.path.join(app.config['IMAGES_PATH'], base_folder)
+    image_path = os.path.join(app.config['IMAGES_PATH'], f"resized/info/{w}-{h}/{item_id}/*.jpg")
 
-    image_folder = os.path.join(image_path, str(item_id))
+    # image_folder = os.path.join(image_path, f"{item_id}/")
 
-    image_files = glob.glob(os.path.join(image_folder, "*.jpg"))
+    image_files = glob.glob(os.path.join(image_path, "*.jpg"))
 
     num_images = len(image_files)
     
@@ -239,7 +242,7 @@ def create_static_text(text, font_size, duration, screen_size, position='top'):
     return text_clip
 
 def create_moving_text(title, option_title, option, price, duration, screen_size, text_color='white', bg_color=(0, 0, 0), speed=0.4, padding=1):
-    font_path = "fonts/th-th/NotoSansThai-Regular.ttf"  # Change this to the path of the SimHei font on your system
+    font_path = os.path.join(app.config['FONTS_PATH'], f"th-th/NotoSansThai-Regular.ttf")  # Change this to the path of the SimHei font on your system
     font_sizes = [25, 28, 28, 33] # font sizes for title, option_title, option, and price
 
     lines = [
@@ -331,6 +334,8 @@ def resize_1688_item_image():
         cmd = f'ffmpeg -i {image} -vf "scale=w={w}:h={h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black" -y {output_path_file}' 
         subprocess.run(cmd, shell=True)
     return jsonify({'message': 'Resize Images successfully!'})
+
+    
 @app.route('/noninfo-images-to-video-slider', methods=['POST']) 
 def noninfo_images_to_video_slider(): 
     data = request.json 
@@ -345,7 +350,9 @@ def noninfo_images_to_video_slider():
     if not os.path.exists(os.path.join(video_size_path)):
         os.makedirs(video_size_path)
 
-    images = os.path.join(app.config['VIDEO_PATH'],f"resized/noninfo/{w}-{h}/{item_id}/*.jpg")
+    images_path = os.path.join(app.config['IMAGES_PATH'],f"resized/noninfo/{w}-{h}/{item_id}/")
+
+    images = glob.glob(os.path.join(images_path, '*.jpg'))
 
     num_images = len(images)
 
@@ -353,14 +360,15 @@ def noninfo_images_to_video_slider():
 
     iframrate = num_images/video_long
     
-    cmd = f'ffmpeg -framerate {iframrate} -pattern_type glob -i {images} -shortest -c:v libx264 -r 25 -pix_fmt yuv420p -y -t {video_long} {video_name}'
+    cmd = f'ffmpeg -framerate {iframrate} -i {images_path}/%d.jpg -c:v libx264 -r 25 -pix_fmt yuv420p -y -t {video_long} {video_name}'
     
     subprocess.run(cmd, shell=True)
 
     return jsonify({'message': 'Resize Item Video successfully!'})
-@app.route('/item-images-info-resize', methods=['POST']) 
+
+@app.route('/item-images-info-resize', methods=['POST'])
 def item_images_info_resize(): 
-    data = request.json 
+    data = request.json
     item_id = data['item_id']
     w = data['w']
     h = data['h']
