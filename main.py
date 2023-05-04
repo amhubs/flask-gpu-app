@@ -32,6 +32,7 @@ image_orginal_path = os.path.join(app.config['IMAGES_PATH'], f"original")
 rm_text_path = os.path.join(app.config['IMAGES_PATH'], f"rm-text")
 resized_path = os.path.join(app.config['IMAGES_PATH'], f"resized")
 resized_info_path = os.path.join(resized_path, f"info")
+resized_noninfo_path = os.path.join(resized_path, f"noninfo")
 info_path = os.path.join(app.config['IMAGES_PATH'], f"info")
 
 video_resized_path = os.path.join(app.config['VIDEO_PATH'], f"resized/info")
@@ -48,6 +49,8 @@ if not os.path.exists(resized_path):
     os.makedirs(resized_path)
 if not os.path.exists(resized_info_path):
     os.makedirs(resized_info_path)
+if not os.path.exists(resized_noninfo_path):
+    os.makedirs(resized_noninfo_path)
 if not os.path.exists(info_path):
     os.makedirs(info_path)   
 if not os.path.exists(video_resized_path):
@@ -280,7 +283,131 @@ def create_moving_text(title, option_title, option, price, duration, screen_size
 #         image_files = list(executor.map(download_image, urls, range(len(urls))))
 #     return image_files
 # generate video end
+@app.route('/resize-1688-item-video', methods=['POST']) 
+def resize_1688_item_video(): 
+    data = request.json 
+    item_id = data['item_id']
+    w = data['w']
+    h = data['h']
+    
+    item_video_url = data['video_url']
+    
+    output_size = os.path.join(app.config['VIDEO_PATH'], f"item-resized/{w}-{h}")
+    
+    output_path = os.path.join(output_size, f"{item_id}.mp4")
 
+    if not os.path.exists(os.path.join(output_size)):
+        os.makedirs(output_size)
+        
+    cmd = f'ffmpeg -i {item_video_url} -vf "scale=w={w}:h={h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black" -y {output_path}'
+    
+    subprocess.run(cmd, shell=True)
+
+    return jsonify({'message': 'Resize Item Video successfully!'})
+  
+@app.route('/resize-1688-item-image', methods=['POST']) 
+def resize_1688_item_image(): 
+    data = request.json 
+    item_id = data['item_id']
+    w = data['w']
+    h = data['h']
+    images_type = data['images_type']
+    
+    size_path = os.path.join(app.config['IMAGES_PATH'], f"resized/{images_type}/{w}-{h}")
+    
+    if not os.path.exists(os.path.join(size_path)):
+        os.makedirs(size_path)
+        
+    output_path = os.path.join(size_path, f"{item_id}")
+    
+    if not os.path.exists(os.path.join(output_path)):
+        os.makedirs(output_path)
+    
+    item_images_data = glob.glob(os.path.join(app.config['IMAGES_PATH'], f"rm-text/{images_type}/{item_id}/*jpg"))
+                                 
+    for index, image in enumerate(item_images_data):
+        output_path_file = f"{output_path}/{index}.jpg"
+
+        cmd = f'ffmpeg -i {image} -vf "scale=w={w}:h={h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black" -y {output_path_file}' 
+        subprocess.run(cmd, shell=True)
+    return jsonify({'message': 'Resize Images successfully!'})
+@app.route('/noninfo-images-to-video-slider', methods=['POST']) 
+def noninfo_images_to_video_slider(): 
+    data = request.json 
+    item_id = data['item_id']
+    w = data['w']
+    h = data['h']
+    
+    video_size_path = os.path.join(app.config['VIDEO_PATH'], f"noninfo/{w}-{h}")
+    
+    video_name = os.path.join(video_size_path, f"{item_id}.mp4")
+
+    if not os.path.exists(os.path.join(video_size_path)):
+        os.makedirs(video_size_path)
+
+    images = os.path.join(app.config['VIDEO_PATH'],f"resized/noninfo/{w}-{h}/{item_id}/*.jpg")
+
+    num_images = len(images)
+
+    video_long = num_images * 2
+
+    iframrate = num_images/video_long
+    
+    cmd = f'ffmpeg -framerate {iframrate} -pattern_type glob -i {images} -shortest -c:v libx264 -r 25 -pix_fmt yuv420p -y -t {video_long} {video_name}'
+    
+    subprocess.run(cmd, shell=True)
+
+    return jsonify({'message': 'Resize Item Video successfully!'})
+@app.route('/item-images-info-resize', methods=['POST']) 
+def item_images_info_resize(): 
+    data = request.json 
+    item_id = data['item_id']
+    w = data['w']
+    h = data['h']
+    
+    captions_titles = data['captions_titles']
+    captions_options_titles = data['captions_options_titles']
+    captions_options = data['captions_options']
+    captions_price = data['captions_price']
+    
+    size_path = os.path.join(app.config['IMAGES_PATH'], f"info/resized/{w}-{h}")
+        
+    output_path = os.path.join(size_path, f"{item_id}")
+    
+    if not os.path.exists(os.path.join(size_path)):
+        os.makedirs(size_path)
+        
+    if not os.path.exists(os.path.join(output_path)):
+        os.makedirs(output_path)
+    
+    font_size_titles = 30
+    font_size_options_titles = 20
+    font_size_options = 24
+    font_size_price = 40
+    price_color = "white"
+
+    text_color = "white"
+    
+    background_color    = "000000@0.4"
+    
+    images = glob(app.config['IMAGES_PATH'],F"resized/info/{w}-{h}/{item_id}/*jpg")
+    
+    font_path = "fonts/th-th/NotoSansThai-Regular.ttf"
+   
+    for index, image in enumerate(images):
+      
+        output_path_file = f"{output_path}/{index}.jpg"
+        
+        text_captions_titles = captions_titles[index]
+        text_captions_options_titles = captions_options_titles[index]
+        text_captions_options = captions_options[index]
+        text_captions_price = captions_price[index]
+        
+        cmd = f'ffmpeg -i {image} -vf "drawtext=text=\'{text_captions_titles}\':fontfile={font_path}:fontsize={font_size_titles}:fontcolor={text_color}:x=(w-text_w)/2:y=30:box=1:boxcolor={background_color}:boxborderw=5,drawtext=text=\'{text_captions_options_titles}\':fontfile={font_path}:fontsize={font_size_options_titles}:fontcolor={text_color}:x=(w-text_w)/2:y=68:box=1:boxcolor={background_color}:boxborderw=5,drawtext=text=\'{text_captions_options}\':fontfile={font_path}:fontsize={font_size_options}:fontcolor={text_color}:x=(w-text_w)/2:y=98:box=1:boxcolor={background_color}:boxborderw=5,drawtext=text=\'Price: {text_captions_price}\':fontfile={font_path}:fontsize={font_size_price}:fontcolor={price_color}:x=(w-text_w)/2:y=140:box=1:boxcolor={background_color}:boxborderw=5" -y {output_path_file}'
+        
+        subprocess.run(cmd, shell=True)
+        
+    return jsonify({'message': 'Resize Images successfully!'})
 @app.route('/ffmpeg-mixing-video', methods=['POST']) 
 def mixing_videos(): 
     data = request.json 
@@ -294,6 +421,7 @@ def mixing_videos():
     output2_size = os.path.join(app.config['VIDEO_PATH'], f"mixed-music/{w}-{h}")
     output1 = os.path.join(output1_size, f"{item_id}.mp4")
     output2 = os.path.join(output2_size, f"{item_id}.mp4")
+    input_audio = f""
     
     if not os.path.exists(os.path.join(output1_size)):
         os.makedirs(output1_size)
@@ -308,7 +436,7 @@ def mixing_videos():
         subprocess.run(cmd, shell=True)
         
     if os.path.exists(output1):
-        cmd = f'ffmpeg -y -i {output1} -i $inputAudio -c:v copy -map 0:v:0 -map 1:a:0 -c:a copy -shortest -f mp4 {output2}'
+        cmd = f'ffmpeg -y -i {output1} -i {input_audio} -c:v copy -map 0:v:0 -map 1:a:0 -c:a copy -shortest -f mp4 {output2}'
         subprocess.run(cmd, shell=True)
     else:
         return jsonify({'no-video': 'Have No Item-Resize Video!'})
