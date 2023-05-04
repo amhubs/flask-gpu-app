@@ -32,6 +32,10 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 image_orginal_path = os.path.join(app.config['IMAGES_PATH'], f"original")
 rm_text_path = os.path.join(app.config['IMAGES_PATH'], f"rm-text")
+resized_path = os.path.join(app.config['IMAGES_PATH'], f"resized")
+resized_info_path = os.path.join(resized_path, f"info")
+info_path = os.path.join(app.config['IMAGES_PATH'], f"info")
+
 video_resized_path = os.path.join(app.config['VIDEO_PATH'], f"resized/info")
 video_info_path =  os.path.join(app.config['VIDEO_PATH'], f"info")
 video_item_resized_path = os.path.join(app.config['VIDEO_PATH'], f"item-resized") 
@@ -42,6 +46,12 @@ if not os.path.exists(image_orginal_path):
     os.makedirs(image_orginal_path)
 if not os.path.exists(rm_text_path):
     os.makedirs(rm_text_path)
+if not os.path.exists(resized_path):
+    os.makedirs(resized_path)
+if not os.path.exists(resized_info_path):
+    os.makedirs(resized_info_path)
+if not os.path.exists(info_path):
+    os.makedirs(info_path)   
 if not os.path.exists(video_resized_path):
     os.makedirs(video_resized_path)
 if not os.path.exists(video_info_path):
