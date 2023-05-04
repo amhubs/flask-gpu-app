@@ -24,11 +24,9 @@ pipe.to("cuda")
 app = Flask(__name__)
 run_with_ngrok(app)
 
-app = Flask(__name__)
 app.config['IMAGES_PATH'] = 'image/1688'
 app.config['VIDEO_PATH'] = 'video/1688'
 app.config['UPLOAD_FOLDER'] = 'upload'
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 image_orginal_path = os.path.join(app.config['IMAGES_PATH'], f"original")
 rm_text_path = os.path.join(app.config['IMAGES_PATH'], f"rm-text")
@@ -68,26 +66,27 @@ if not os.path.exists(video_mixed_musix_path):
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
     
-@app.route('/')
-def initial():
-  return render_template('index.html')
+# @app.route('/')
+# def initial():
+#   return render_template('index.html')
 
 
-@app.route('/submit-prompt', methods=['POST'])
-def generate_image():
-  prompt = request.form['prompt-input']
-  print(f"Generating an image of {prompt}")
+# @app.route('/submit-prompt', methods=['POST'])
+# def generate_image():
+#   prompt = request.form['prompt-input']
+#   print(f"Generating an image of {prompt}")
 
-  image = pipe(prompt).images[0]
-  print("Image generated! Converting image ...")
+#   image = pipe(prompt).images[0]
+#   print("Image generated! Converting image ...")
   
-  buffered = BytesIO()
-  image.save(buffered, format="PNG")
-  img_str = base64.b64encode(buffered.getvalue())
-  img_str = "data:image/png;base64," + str(img_str)[2:-1]
+#   buffered = BytesIO()
+#   image.save(buffered, format="PNG")
+#   img_str = base64.b64encode(buffered.getvalue())
+#   img_str = "data:image/png;base64," + str(img_str)[2:-1]
 
-  print("Sending image ...")
-  return render_template('index.html', generated_image=img_str)
+#   print("Sending image ...")
+#   return render_template('index.html', generated_image=img_str)
+
 # Initialize EasyOCR for text recognition (both Chinese and English)
 reader = easyocr.Reader(['ch_sim'])
 
@@ -115,59 +114,46 @@ def remove_text(input_image):
 @app.route('/remove-text', methods=['POST'])
 def process_images():
     data = request.json
-    
     item_id = data['item_id']
-
     images_type = data['images_type'] 
-    
     images_url = data['images_url']
-    
-    image_files = download_images_concurrently(images_url)
-    
-    # image_path = os.path.join(app.config['IMAGES_PATH'], f"original/{images_type}")
-
-    # image_folder = os.path.join(image_path, str(item_id))
-
-    # image_files = glob.glob(os.path.join(image_folder, "*.jpg"))
-
     rm_text_path = os.path.join(app.config['IMAGES_PATH'], f"rm-text/{images_type}")
-
     rm_text_path_folder = os.path.join(rm_text_path, str(item_id))
-
     if not os.path.exists(os.path.join(rm_text_path_folder)):
         os.makedirs(rm_text_path_folder)
-    if not os.path.exists(os.path.join(rm_text_path)):
-        os.makedirs(rm_text_path)
-
+     # Download all the images to rm_text_path_folder
+    image_files = download_images_concurrently(images_url, rm_text_path_folder)
     output_files = []
-
     for i, filepath in enumerate(image_files):
         try:
             img = cv2.imread(filepath)  # Read the image using cv2.imread()
-
-            # Extract text and its location from the image
+             # Extract text and its location from the image
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             result = reader.readtext(gray, paragraph=False)
-
-            # Skip image if no text is found
+             # Skip image if no text is found
             if not result:
-                output_files.append(None)
+                output_files.append(os.path.join(rm_text_path_folder, os.path.basename(filepath)))
                 continue
-
             img_inpainted = remove_text(img)
-
-            output_path = os.path.join(rm_text_path_folder, f"{i}.jpg")
+            output_path = os.path.join(rm_text_path_folder, os.path.basename(filepath))
             cv2.imwrite(output_path, img_inpainted)
-
             output_files.append(output_path)
-
         except Exception as e:
             print(f"Error processing image {filepath}: {e}")
             output_files.append(None)
-
- # Print the output files before returning the JSON response
-    return jsonify({"output_files": output_path})
-
+     # Print the output files before returning the JSON response
+    return jsonify({"output_files": output_files})
+def download_image(url, index, folder):
+    response = requests.get(url)
+    image_file = os.path.join(folder, f'{index}.jpg')
+    with open(image_file, 'wb') as f:
+        f.write(response.content)
+    return image_file
+def download_images_concurrently(urls, folder):
+    image_files = []
+    with ThreadPoolExecutor() as executor:
+        image_files = list(executor.map(download_image, urls, range(len(urls)), [folder]*len(urls)))
+    return image_files
 @app.route('/generate-video', methods=['POST'])
 def generate_video():
     
@@ -281,18 +267,18 @@ def create_moving_text(title, option_title, option, price, duration, screen_size
     txt_mov = txt_mov.set_duration(duration)
     return txt_mov
 
-def download_image(url, index):
-    response = requests.get(url)
-    image_file = f'image{index}.jpg'
-    with open(image_file, 'wb') as f:
-        f.write(response.content)
-    return image_file
+# def download_image(url, index):
+#     response = requests.get(url)
+#     image_file = f'image{index}.jpg'
+#     with open(image_file, 'wb') as f:
+#         f.write(response.content)
+#     return image_file
 
-def download_images_concurrently(urls):
-    image_files = []
-    with ThreadPoolExecutor() as executor:
-        image_files = list(executor.map(download_image, urls, range(len(urls))))
-    return image_files
+# def download_images_concurrently(urls):
+#     image_files = []
+#     with ThreadPoolExecutor() as executor:
+#         image_files = list(executor.map(download_image, urls, range(len(urls))))
+#     return image_files
 # generate video end
 
 @app.route('/ffmpeg-mixing-video', methods=['POST']) 
@@ -361,6 +347,9 @@ def mixing_end():
         return jsonify({'no-video': 'Have No Mixed Video!'})
     
     return jsonify({'message': 'End Video mixed successfully!'})
+  
 
 if __name__ == '__main__':
     app.run()
+    
+    
