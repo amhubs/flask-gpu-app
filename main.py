@@ -30,6 +30,31 @@ app.config['VIDEO_PATH'] = 'video/1688'
 app.config['UPLOAD_FOLDER'] = 'upload'
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
+image_orginal_path = os.path.join(app.config['IMAGES_PATH'], f"original")
+rm_text_path = os.path.join(app.config['IMAGES_PATH'], f"rm-text")
+video_resized_path = os.path.join(app.config['VIDEO_PATH'], f"resized/info")
+video_info_path =  os.path.join(app.config['VIDEO_PATH'], f"info")
+video_item_resized_path = os.path.join(app.config['VIDEO_PATH'], f"item-resized") 
+video_item_noninfo_path = os.path.join(app.config['VIDEO_PATH'], f"noninfo") 
+video_mixed_path = os.path.join(app.config['VIDEO_PATH'], f"mixed")
+video_mixed_musix_path = os.path.join(app.config['VIDEO_PATH'], f"mixed-music")
+if not os.path.exists(image_orginal_path):
+    os.makedirs(image_orginal_path)
+if not os.path.exists(rm_text_path):
+    os.makedirs(rm_text_path)
+if not os.path.exists(video_resized_path):
+    os.makedirs(video_resized_path)
+if not os.path.exists(video_info_path):
+    os.makedirs(video_info_path)
+if not os.path.exists(video_item_resized_path):
+    os.makedirs(video_item_resized_path)
+if not os.path.exists(video_item_noninfo_path):
+    os.makedirs(video_item_noninfo_path)
+if not os.path.exists(video_mixed_path):
+    os.makedirs(video_mixed_path)
+if not os.path.exists(video_mixed_musix_path):
+    os.makedirs(video_mixed_musix_path)
+
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
     
@@ -85,11 +110,15 @@ def process_images():
 
     images_type = data['images_type'] 
     
-    image_path = os.path.join(app.config['IMAGES_PATH'], f"original/{images_type}")
+    images_url = data['images_url']
+    
+    image_files = download_images_concurrently(images_url)
+    
+    # image_path = os.path.join(app.config['IMAGES_PATH'], f"original/{images_type}")
 
-    image_folder = os.path.join(image_path, str(item_id))
+    # image_folder = os.path.join(image_path, str(item_id))
 
-    image_files = glob.glob(os.path.join(image_folder, "*.jpg"))
+    # image_files = glob.glob(os.path.join(image_folder, "*.jpg"))
 
     rm_text_path = os.path.join(app.config['IMAGES_PATH'], f"rm-text/{images_type}")
 
@@ -97,6 +126,8 @@ def process_images():
 
     if not os.path.exists(os.path.join(rm_text_path_folder)):
         os.makedirs(rm_text_path_folder)
+    if not os.path.exists(os.path.join(rm_text_path)):
+        os.makedirs(rm_text_path)
 
     output_files = []
 
