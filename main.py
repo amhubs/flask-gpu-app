@@ -24,10 +24,10 @@ pipe.to("cuda")
 app = Flask(__name__)
 run_with_ngrok(app)
 
-app.config['IMAGES_PATH'] = 'drive/MyDrive/image/1688'
-app.config['VIDEO_PATH'] = 'drive/MyDrive/video/1688'
-app.config['UPLOAD_FOLDER'] = 'drive/MyDrive/upload'
-app.config['FONTS_PATH'] = 'drive/MyDrive/fonts'
+app.config['IMAGES_PATH'] = '/content/drive/MyDrive/image/1688'
+app.config['VIDEO_PATH'] = '/content/drive/MyDrive/video/1688'
+app.config['UPLOAD_FOLDER'] = '/content/drive/MyDrive/upload'
+app.config['FONTS_PATH'] = '/content/drive/MyDrive/fonts'
 
 image_orginal_path = os.path.join(app.config['IMAGES_PATH'], f"original")
 rm_text_path = os.path.join(app.config['IMAGES_PATH'], f"rm-text")
@@ -179,7 +179,7 @@ def generate_video():
     
     # base_folder = f"resized/info/{w}-{h}"
 
-    image_path = os.path.join(app.config['IMAGES_PATH'], f"resized/info/{w}-{h}/{item_id}/*.jpg")
+    image_path = os.path.join(app.config['IMAGES_PATH'], f"resized/info/{w}-{h}/{item_id}")
 
     # image_folder = os.path.join(image_path, f"{item_id}/")
 
