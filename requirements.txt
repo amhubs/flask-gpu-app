@@ -6,3 +6,12 @@ ftfy
 accelerate
 pyngrok==4.1.1
 flask_ngrok
+Werkzeug
+easyocr
+opencv-python
+numpy
+urllib3
+requests
+glob3
+moviepy
+concurrent.futures
