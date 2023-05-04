@@ -10,8 +10,7 @@ Werkzeug
 easyocr
 opencv-python
 numpy
+glob2
 urllib3
 requests
-glob3==0.0.1
 moviepy
-concurrent.futures
