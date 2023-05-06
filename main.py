@@ -333,20 +333,25 @@ def download_music_file():
     data = request.json
     music_id = data['music_id']
     play_url = data['play_url']
-    response = requests.get(play_url)
     music_path = os.path.join(app.config['MUSIC_PATH'], f"tiktok")
     music_file = os.path.join(music_path, f'{music_id}.mp3')
+
+    if os.path.exists(music_file):
+        return jsonify({'message': music_file})
+
+    response = requests.get(play_url)
     with open(music_file, 'wb') as f:
         f.write(response.content)
 
-    return jsonify({'message': music_file}) 
+    return jsonify({'message': music_file})
   
 @app.route('/mixing-voice-and-music', methods=['POST']) 
 def mixing_voice_and_music():
     data = request.json
     item_id = data['item_id']
-    music_id = data['music_id']
     valume = data['valume']
+    music_id = data['music_id']
+
 
     adjust_music_sound(music_id, valume)
 
@@ -396,17 +401,29 @@ def botnoi_voice():
     speaker = data['speaker']
     volume = data['volume']
     speed = data['speed']
+    item_id = data['item_id']
     type_media = data['type_media']
     url = "https://api-voice.botnoi.ai/api/service/generate_audio"
-    payload = {"text":f"{text}", "speaker":f"{speaker}", "volume":{volume}, "speed":{speed}, "type_media":f"type_media"}
+    payload = {"text":text, "speaker":speaker, "volume":volume, "speed":speed, "type_media":type_media}
     headers = {
-    'Botnoi-Token': {token},
+    'Botnoi-Token': token,
     'Content-Type': 'application/json'
     }
     
     response = requests.request("POST", url, headers=headers, json=payload)
   
-    return response.json()
+    audio_url = response.json()['success']['audio_url']
+
+    music_path = os.path.join(app.config['MUSIC_PATH'], "botnoi")
+    music_file = os.path.join(music_path, f"{item_id}.mp3")
+
+    if not os.path.exists(music_path):
+        os.makedirs(music_path)
+
+    if not os.path.exists(music_file):
+        urllib.request.urlretrieve(audio_url, music_file)
+
+    return jsonify({'message': music_file})
     
 @app.route('/ffmpeg-mixing-video', methods=['POST']) 
 def mixing_videos(): 
@@ -475,7 +492,6 @@ def mixing_end():
         return jsonify({'no-video': 'Have No Mixed Video!'})
     
     return jsonify({'message': 'End Video mixed successfully!'})
-  
 
 if __name__ == '__main__':
     app.run()
