@@ -26,6 +26,7 @@ run_with_ngrok(app)
 
 app.config['IMAGES_PATH'] = '/content/drive/MyDrive/image/1688'
 app.config['VIDEO_PATH'] = '/content/drive/MyDrive/video/1688'
+app.config['MUSIC_PATH'] = '/content/drive/MyDrive/music'
 app.config['UPLOAD_FOLDER'] = '/content/drive/MyDrive/upload'
 app.config['FONTS_PATH'] = '/content/drive/MyDrive/fonts'
 
@@ -36,13 +37,21 @@ resized_info_path = os.path.join(resized_path, f"info")
 resized_noninfo_path = os.path.join(resized_path, f"noninfo")
 info_path = os.path.join(app.config['IMAGES_PATH'], f"info")
 
-video_resized_path = os.path.join(app.config['VIDEO_PATH'], f"resized/info")
 video_info_path =  os.path.join(app.config['VIDEO_PATH'], f"info")
 video_item_resized_path = os.path.join(app.config['VIDEO_PATH'], f"item-resized") 
 video_item_noninfo_path = os.path.join(app.config['VIDEO_PATH'], f"noninfo") 
 video_mixed_path = os.path.join(app.config['VIDEO_PATH'], f"mixed")
 video_mixed_musix_path = os.path.join(app.config['VIDEO_PATH'], f"mixed-music")
 
+if not os.path.exists(os.path.join(app.config['MUSIC_PATH'], f"mixed/1688")):
+    os.makedirs(os.path.join(app.config['MUSIC_PATH'], f"mixed/1688"))
+if not os.path.exists(os.path.join(app.config['MUSIC_PATH'], f"botnoi")):
+    os.makedirs(os.path.join(app.config['MUSIC_PATH'], f"botnoi"))
+if not os.path.exists(os.path.join(app.config['MUSIC_PATH'], f"tiktok")):
+    os.makedirs(os.path.join(app.config['MUSIC_PATH'], f"tiktok"))
+
+if not os.path.exists(app.config['MUSIC_PATH']):
+    os.makedirs(app.config['MUSIC_PATH'])
 if not os.path.exists(image_orginal_path):
     os.makedirs(image_orginal_path)
 if not os.path.exists(rm_text_path):
@@ -54,9 +63,8 @@ if not os.path.exists(resized_info_path):
 if not os.path.exists(resized_noninfo_path):
     os.makedirs(resized_noninfo_path)
 if not os.path.exists(info_path):
-    os.makedirs(info_path)   
-if not os.path.exists(video_resized_path):
-    os.makedirs(video_resized_path)
+    os.makedirs(info_path)
+
 if not os.path.exists(video_info_path):
     os.makedirs(video_info_path)
 if not os.path.exists(video_item_resized_path):
@@ -160,137 +168,7 @@ def download_images_concurrently(urls, folder):
         image_files = list(executor.map(download_image, urls, range(len(urls)), [folder]*len(urls)))
     return image_files
 
-@app.route('/generate-video', methods=['POST'])
-def generate_video():
-    
-    data = request.json
-    
-    item_id = data['item_id']
-    w = data['w']
-    h = data['h']
-    
-    # images_url = data['images_url']
-    captions_titles = data['captions_titles']
-    captions_options_titles = data['captions_options_titles']
-    captions_options = data['captions_options']
-    captions_price = data['captions_price']
-    
-    # image_files = download_images_concurrently(images_url)
-    
-    # base_folder = f"resized/info/{w}-{h}"
 
-    image_path = os.path.join(app.config['IMAGES_PATH'], f"resized/info/{w}-{h}/{item_id}")
-
-    # image_folder = os.path.join(image_path, f"{item_id}/")
-
-    image_files = glob.glob(os.path.join(image_path, "*.jpg"))
-
-    num_images = len(image_files)
-    
-    total_duration = 30
-    
-    duration_per_image = total_duration / num_images
-    
-    durations = [duration_per_image] * num_images
-
-    image_clips = [create_image_clip(image_file, duration) for image_file, duration in zip(image_files, durations)]
-
-    screen_size = (image_clips[0].size)
-
-    # moving_text_clips = [create_moving_text(captions_titles[i], font_size, durations[i], screen_size, text_color='white', bg_color=(0, 0, 0), speed=0.6, padding=8) for i in range(len(captions_titles))]
-    moving_text_clips = [create_moving_text(captions_titles[i], captions_options_titles[i], captions_options[i], captions_price[i], durations[i], screen_size, text_color='white', bg_color=(0, 0, 0), speed=0.6, padding=5) for i in range(len(captions_titles))]
-   
-    composite_clips = []
-
-    for i in range(len(image_files)):
-        img_clip = image_clips[i].subclip(0, durations[i])
-        composite_clip = CompositeVideoClip([img_clip, moving_text_clips[i]])
-        composite_clips.append(composite_clip)
-        
-    final_video = concatenate_videoclips(composite_clips)
-    
-    save_path = os.path.join(app.config['VIDEO_PATH'], f"info/{w}-{h}")
-    
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    
-    output_path = os.path.join(save_path, f"{item_id}.mp4")
-    
-    final_video.write_videofile(output_path, fps=24)
-    
-    print("Output files:", output_path)
-    
-    return jsonify({"output_files": output_path}, 200)
-
-
-def create_image_clip(image_file, duration):
-    return ImageClip(image_file).set_duration(duration)
-
-def create_static_text(text, font_size, duration, screen_size, position='top'):
-    text_clip = TextClip(text, fontsize=font_size, color='white')
-    text_clip = text_clip.set_duration(duration)
-    
-    if position == 'top':
-        text_position = (screen_size[0] - text_clip.size[0]) // 8, screen_size[1] - text_clip.size[1] - 15
-        
-    elif position == 'top':
-        text_position = (screen_size[0] - text_clip.size[0]) // 8, 8
-    else:
-        text_position = (screen_size[0] - text_clip.size[0]) // 8, (screen_size[1] - text_clip.size[1]) // 8
-
-    text_clip = text_clip.set_position(text_position)
-    return text_clip
-    
-IMAGEMAGICK_BINARY = '/usr/bin/convert'
-
-from moviepy.config import change_settings
-change_settings({"IMAGEMAGICK_BINARY": IMAGEMAGICK_BINARY})
-
-def create_moving_text(title, option_title, option, price, duration, screen_size, text_color='white', bg_color=(0, 0, 0), speed=0.4, padding=1):
-    font_path = os.path.join(app.config['FONTS_PATH'], f"th-th/NotoSansThai-Regular.ttf")  # Change this to the path of the SimHei font on your system
-    font_sizes = [25, 28, 28, 33] # font sizes for title, option_title, option, and price
-
-    lines = [
-        TextClip(title, fontsize=font_sizes[0], color=text_color, font=font_path),
-        TextClip(option_title, fontsize=font_sizes[1], color=text_color, font=font_path),
-        TextClip(option, fontsize=font_sizes[2], color=text_color, font=font_path),
-        TextClip(price, fontsize=font_sizes[3], color=text_color, font=font_path)
-    ]
-
-    # Calculate the total height of the text block
-    
-    total_height = sum([l.h for l in lines]) + 10 * padding
-
-    # Position the lines vertically with padding and centered horizontally
-    line_positions = [((screen_size[0] - line.w) // 2, i * (h + padding)) for i, (line, h) in enumerate(zip(lines, [l.h for l in lines]))]
-    positioned_lines = [line.set_position(pos) for line, pos in zip(lines, line_positions)]
-
-    # Create a composite clip with the positioned lines
-    lines_composite = CompositeVideoClip(positioned_lines, size=(screen_size[0], total_height))
-
-    # Create a colored background for the text block
-    txt_bg = lines_composite.on_color(size=(screen_size[0] + padding * 1, total_height + padding * 1),
-                                      color=bg_color, pos=('center', 'center'), col_opacity=0.5)
-
-    # Set the moving position for the text block
-    txt_mov = txt_bg.set_position(lambda t: ((screen_size[0] - txt_bg.w) // 4,
-                                             min(screen_size[1] // 8, int(screen_size[1] * t / 10))))
-    txt_mov = txt_mov.set_duration(duration)
-    return txt_mov
-
-# def download_image(url, index):
-#     response = requests.get(url)
-#     image_file = f'image{index}.jpg'
-#     with open(image_file, 'wb') as f:
-#         f.write(response.content)
-#     return image_file
-
-# def download_images_concurrently(urls):
-#     image_files = []
-#     with ThreadPoolExecutor() as executor:
-#         image_files = list(executor.map(download_image, urls, range(len(urls))))
-#     return image_files
-# generate video end
 @app.route('/resize-1688-item-video', methods=['POST']) 
 def resize_1688_item_video(): 
     data = request.json 
@@ -361,7 +239,7 @@ def noninfo_images_to_video_slider():
 
     num_images = len(images)
 
-    video_long = num_images * 2
+    video_long = num_images * 5
 
     iframrate = num_images/video_long
     
@@ -370,7 +248,35 @@ def noninfo_images_to_video_slider():
     subprocess.run(cmd, shell=True)
 
     return jsonify({'message': 'Resize Item Video successfully!'})
+@app.route('/info-images-to-video-slider', methods=['POST']) 
+def info_images_to_video_slider(): 
+    data = request.json 
+    item_id = data['item_id']
+    w = data['w']
+    h = data['h']
+    
+    video_size_path = os.path.join(app.config['VIDEO_PATH'], f"info/{w}-{h}")
+    
+    video_name = os.path.join(video_size_path, f"{item_id}.mp4")
 
+    if not os.path.exists(os.path.join(video_size_path)):
+        os.makedirs(video_size_path)
+
+    images_path = os.path.join(app.config['IMAGES_PATH'], f"info/resized/{w}-{h}/{item_id}/")
+
+    images = glob.glob(os.path.join(images_path, '*.jpg'))
+
+    num_images = len(images)
+
+    video_long = num_images * 5
+
+    iframrate = num_images/video_long
+    
+    cmd = f'ffmpeg -framerate {iframrate} -i {images_path}/%d.jpg -c:v libx264 -r 25 -pix_fmt yuv420p -y -t {video_long} {video_name}'
+    
+    subprocess.run(cmd, shell=True)
+
+    return jsonify({'message': 'Resize Item Video successfully!'})
 @app.route('/item-images-info-resize', methods=['POST'])
 def item_images_info_resize(): 
     data = request.json
@@ -421,7 +327,87 @@ def item_images_info_resize():
         subprocess.run(cmd, shell=True)
         
     return jsonify({'message': 'Resize Images successfully!'})
+  
+@app.route('/download-music-file', methods=['POST']) 
+def download_music_file():
+    data = request.json
+    music_id = data['music_id']
+    play_url = data['play_url']
+    response = requests.get(play_url)
+    music_path = os.path.join(app.config['MUSIC_PATH'], f"tiktok")
+    music_file = os.path.join(music_path, f'{music_id}.mp3')
+    with open(music_file, 'wb') as f:
+        f.write(response.content)
 
+    return jsonify({'message': music_file}) 
+  
+@app.route('/mixing-voice-and-music', methods=['POST']) 
+def mixing_voice_and_music():
+    data = request.json
+    item_id = data['item_id']
+    music_id = data['music_id']
+    valume = data['valume']
+
+    adjust_music_sound(music_id, valume)
+
+    voice = os.path.join(app.config['MUSIC_PATH'], f"botnoi/{item_id}.mp3")
+
+    music = os.path.join(app.config['MUSIC_PATH'], f"tiktok/{valume}/{music_id}.mp3")
+
+    music_output = os.path.join(app.config['MUSIC_PATH'], f"mixed/1688/{valume}_{music_id}.mp3")
+
+    mixed_output = os.path.join(app.config['MUSIC_PATH'], f"mixed/1688/{item_id}.mp3")
+
+    cmd = f'ffmpeg -stream_loop -1 -i {music} -filter_complex "atrim=0:60,asetpts=PTS-STARTPTS" -t 60 -y {music_output}'
+    
+    subprocess.run(cmd, shell=True)
+
+    cmd = f'ffmpeg -i {music_output} -i {voice} -filter_complex "amix=inputs=2:duration=shortest:dropout_transition=2" -y {mixed_output}'
+    
+    subprocess.run(cmd, shell=True)
+
+    return jsonify({'message': 'Mixing Voice and Music successfully!'})
+  
+def adjust_music_sound(music_id, valume):
+
+    input_path = os.path.join(app.config['MUSIC_PATH'], f"tiktok")
+
+    output_path = os.path.join(input_path, f"{valume}")
+
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    input_music = os.path.join(input_path, f"{music_id}.mp3")
+
+    output_music = os.path.join(output_path, f"{music_id}.mp3")
+    
+    cmd = f'ffmpeg -y -i {input_music} -af "volume={valume}" {output_music}'
+    
+    subprocess.run(cmd, shell=True)
+
+    return jsonify({'message': 'Adjust Music successfully!'})  
+  
+
+@app.route('/botnoi-voice', methods=['POST']) 
+def botnoi_voice():
+    data = request.json
+    token = data['token']
+    text = data['text']
+    speaker = data['speaker']
+    volume = data['volume']
+    speed = data['speed']
+    type_media = data['type_media']
+    url = "https://api-voice.botnoi.ai/api/service/generate_audio"
+    payload = {"text":f"{text}", "speaker":f"{speaker}", "volume":{volume}, "speed":{speed}, "type_media":f"type_media"}
+    headers = {
+    'Botnoi-Token': {token},
+    'Content-Type': 'application/json'
+    }
+    
+    response = requests.request("POST", url, headers=headers, json=payload)
+  
+    return response.json()
+    
 @app.route('/ffmpeg-mixing-video', methods=['POST']) 
 def mixing_videos(): 
     data = request.json 
@@ -458,15 +444,15 @@ def mixing_videos():
     return jsonify({'message': 'Video mixing successfully!'})
     # cmd = f'ffmpeg -i {input_1} -i {input_2} -i {input_3} -i {input_4} -filter_complex "[0:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v0];[1:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v1];[2:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v2];[3:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v3];[v0][v1][v2][v3]concat=n=4:v=1:a=0" -an -t 55 -y {output}'sdf
     """
-Certainly! This is a command-line command that uses the FFmpeg software to concatenate two video files and output the result as a single video file. Here's what each part of the command does:
- -  `ffmpeg` : This is the FFmpeg command-line tool that does the video processing.
--  `-i {input_2} -i {input_3}` : This specifies the two input video files that will be concatenated.  `{input_2}`  and  `{input_3}`  are variables that should be replaced with the actual file paths.
--  `-filter_complex` : This is an FFmpeg option that allows us to use complex filtergraphs to apply different filters and effects to the input streams. In this case, we're using it to concatenate the two inputs. 
--  `"[0:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v0];[1:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v1];[v0][v1]concat=n=2:v=1:a=0"` : This complex filtergraph has three parts, separated by semicolons. The first two parts set the PTS (presentation timestamps) of the video frames to speed up or slow down the video as needed to make it match a maximum duration of 55 seconds ( `-t 55` ). The third part concatenates the two video streams together, using  `concat=n=2:v=1:a=0`  to specify that we want to concatenate two video streams ( `n=2:v=1:a=0`  means "2 videos, 1 video stream per input, 0 audio streams per input").  `[v0]`  and  `[v1]`  are temporary labels used to refer to the output of the first and second parts of the filtergraph.
--  `-an` : This option tells FFmpeg to remove any audio streams from the output video file.
--  `-t 55` : This option sets a maximum duration of 55 seconds for the output video. If the concatenated video is longer than 55 seconds, it will be trimmed.
--  `-y {output}` : This specifies the output file path and tells FFmpeg to overwrite it if it already exists.  `{output}`  is a variable that should be replaced with the actual file path.
- Overall, this command takes two input video files, speeds them up or slows them down as needed to make them fit into a 55-second duration, concatenates them into a single video file, and removes any audio streams from the output. The resulting video file will be saved at the specified output path.
+      Certainly! This is a command-line command that uses the FFmpeg software to concatenate two video files and output the result as a single video file. Here's what each part of the command does:
+      -  `ffmpeg` : This is the FFmpeg command-line tool that does the video processing.
+      -  `-i {input_2} -i {input_3}` : This specifies the two input video files that will be concatenated.  `{input_2}`  and  `{input_3}`  are variables that should be replaced with the actual file paths.
+      -  `-filter_complex` : This is an FFmpeg option that allows us to use complex filtergraphs to apply different filters and effects to the input streams. In this case, we're using it to concatenate the two inputs. 
+      -  `"[0:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v0];[1:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v1];[v0][v1]concat=n=2:v=1:a=0"` : This complex filtergraph has three parts, separated by semicolons. The first two parts set the PTS (presentation timestamps) of the video frames to speed up or slow down the video as needed to make it match a maximum duration of 55 seconds ( `-t 55` ). The third part concatenates the two video streams together, using  `concat=n=2:v=1:a=0`  to specify that we want to concatenate two video streams ( `n=2:v=1:a=0`  means "2 videos, 1 video stream per input, 0 audio streams per input").  `[v0]`  and  `[v1]`  are temporary labels used to refer to the output of the first and second parts of the filtergraph.
+      -  `-an` : This option tells FFmpeg to remove any audio streams from the output video file.
+      -  `-t 55` : This option sets a maximum duration of 55 seconds for the output video. If the concatenated video is longer than 55 seconds, it will be trimmed.
+      -  `-y {output}` : This specifies the output file path and tells FFmpeg to overwrite it if it already exists.  `{output}`  is a variable that should be replaced with the actual file path.
+      Overall, this command takes two input video files, speeds them up or slows them down as needed to make them fit into a 55-second duration, concatenates them into a single video file, and removes any audio streams from the output. The resulting video file will be saved at the specified output path.
     """
 @app.route('/ffmpeg-mixing-end', methods=['POST']) 
 def mixing_end(): 
