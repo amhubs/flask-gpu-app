@@ -451,7 +451,9 @@ def mixing_videos():
         os.makedirs(output2_size)
         
     if os.path.exists(input_1):
-        cmd = f'ffmpeg -i {input_1} -i {input_2} -i {input_3} -filter_complex "[0:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v0];[1:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v1];[2:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v2];[v0][v1][v2]concat=n=3:v=1:a=0" -an -t 55 -y {output1}'
+        # cmd = f'ffmpeg -i {input_1} -i {input_2} -i {input_3} -filter_complex "[0:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v0];[1:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v1];[2:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v2];[v0][v1][v2]concat=n=3:v=1:a=0" -an -t 55 -y {output1}'
+        # subprocess.run(cmd, shell=True)
+        cmd = 'ffmpeg -hwaccel cuvid -c:v h264_cuvid -i {input_1} -hwaccel cuvid -c:v h264_cuvid -i {input_2} -hwaccel cuvid -c:v h264_cuvid -i {input_3} -filter_complex "[0:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v0];[1:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v1];[2:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v2];[v0][v1][v2]concat=n=3:v=1:a=0" -an -t 55 -c:v h264_nvenc -y {output1}'
         subprocess.run(cmd, shell=True)
         result = jsonify({'item-video-images': 'Created Mixing With Item Video!'})
     else:
@@ -463,9 +465,9 @@ def mixing_videos():
         cmd = f'ffmpeg -y -i {output1} -i {input_audio} -c:v copy -map 0:v:0 -map 1:a:0 -c:a copy -shortest -f mp4 {output2}'
         subprocess.run(cmd, shell=True)
     else:
-        return jsonify({'no-video': 'Have No Item-Resize Video!'})
+        result = jsonify({'no-video': 'Have No Item-Resize Video!'})
     
-
+    return result
     # cmd = f'ffmpeg -i {input_1} -i {input_2} -i {input_3} -i {input_4} -filter_complex "[0:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v0];[1:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v1];[2:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v2];[3:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v3];[v0][v1][v2][v3]concat=n=4:v=1:a=0" -an -t 55 -y {output}'sdf
     """
       Certainly! This is a command-line command that uses the FFmpeg software to concatenate two video files and output the result as a single video file. Here's what each part of the command does:
