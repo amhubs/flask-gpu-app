@@ -41,7 +41,8 @@ video_info_path =  os.path.join(app.config['VIDEO_PATH'], f"info")
 video_item_resized_path = os.path.join(app.config['VIDEO_PATH'], f"item-resized") 
 video_item_noninfo_path = os.path.join(app.config['VIDEO_PATH'], f"noninfo") 
 video_mixed_path = os.path.join(app.config['VIDEO_PATH'], f"mixed")
-video_mixed_musix_path = os.path.join(app.config['VIDEO_PATH'], f"mixed-music")
+video_mixed_music_path = os.path.join(app.config['VIDEO_PATH'], f"mixed-music")
+video_mixed_music_ai_voice_path = os.path.join(app.config['VIDEO_PATH'], f"mixed-music-ai-voice")
 
 if not os.path.exists(os.path.join(app.config['MUSIC_PATH'], f"mixed/1688")):
     os.makedirs(os.path.join(app.config['MUSIC_PATH'], f"mixed/1688"))
@@ -73,8 +74,10 @@ if not os.path.exists(video_item_noninfo_path):
     os.makedirs(video_item_noninfo_path)
 if not os.path.exists(video_mixed_path):
     os.makedirs(video_mixed_path)
-if not os.path.exists(video_mixed_musix_path):
-    os.makedirs(video_mixed_musix_path)
+if not os.path.exists(video_mixed_music_path):
+    os.makedirs(video_mixed_music_path)
+if not os.path.exists(video_mixed_music_ai_voice_path):
+    os.makedirs(video_mixed_music_ai_voice_path)
 
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
@@ -359,7 +362,7 @@ def mixing_voice_and_music():
 
     music = os.path.join(app.config['MUSIC_PATH'], f"tiktok/{valume}/{music_id}.mp3")
 
-    music_output = os.path.join(app.config['MUSIC_PATH'], f"mixed/1688/{valume}_{music_id}.mp3")
+    music_output = os.path.join(app.config['MUSIC_PATH'], f"mixed/1688/{valume}_{item_id}.mp3")
 
     mixed_output = os.path.join(app.config['MUSIC_PATH'], f"mixed/1688/{item_id}.mp3")
 
@@ -430,7 +433,9 @@ def mixing_videos():
     data = request.json 
     item_id = data['item_id'] 
     w = data['w'] 
-    h = data['h'] 
+    h = data['h']
+    valume = data['valume']
+    
     input_1 = os.path.join(app.config['VIDEO_PATH'], f"item-resized/{w}-{h}/{item_id}.mp4") 
     input_3 = os.path.join(app.config['VIDEO_PATH'], f"info/{w}-{h}/{item_id}.mp4") 
     input_2 = os.path.join(app.config['VIDEO_PATH'], f"noninfo/{w}-{h}/{item_id}.mp4") 
@@ -438,7 +443,7 @@ def mixing_videos():
     output2_size = os.path.join(app.config['VIDEO_PATH'], f"mixed-music/{w}-{h}")
     output1 = os.path.join(output1_size, f"{item_id}.mp4")
     output2 = os.path.join(output2_size, f"{item_id}.mp4")
-    input_audio = f""
+    input_audio = os.path.join(app.config['MUSIC_PATH'], f"mixed/1688/{valume}_{item_id}.mp3")
     
     if not os.path.exists(os.path.join(output1_size)):
         os.makedirs(output1_size)
@@ -448,9 +453,11 @@ def mixing_videos():
     if os.path.exists(input_1):
         cmd = f'ffmpeg -i {input_1} -i {input_2} -i {input_3} -filter_complex "[0:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v0];[1:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v1];[2:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v2];[v0][v1][v2]concat=n=3:v=1:a=0" -an -t 55 -y {output1}'
         subprocess.run(cmd, shell=True)
+        result = jsonify({'item-video-images': 'Created Mixing With Item Video!'})
     else:
         cmd = f'ffmpeg -i {input_2} -i {input_3} -filter_complex "[0:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v0];[1:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v1];[v0][v1]concat=n=2:v=1:a=0" -an -t 55 -y {output1}'
         subprocess.run(cmd, shell=True)
+        result = jsonify({'no-item-video-images': 'Created Muxing Only Images!'})
         
     if os.path.exists(output1):
         cmd = f'ffmpeg -y -i {output1} -i {input_audio} -c:v copy -map 0:v:0 -map 1:a:0 -c:a copy -shortest -f mp4 {output2}'
@@ -458,7 +465,7 @@ def mixing_videos():
     else:
         return jsonify({'no-video': 'Have No Item-Resize Video!'})
     
-    return jsonify({'message': 'Video mixing successfully!'})
+
     # cmd = f'ffmpeg -i {input_1} -i {input_2} -i {input_3} -i {input_4} -filter_complex "[0:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v0];[1:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v1];[2:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v2];[3:v]setpts=\'(if(gt(TB,55),55/TB,1))*PTS\'[v3];[v0][v1][v2][v3]concat=n=4:v=1:a=0" -an -t 55 -y {output}'sdf
     """
       Certainly! This is a command-line command that uses the FFmpeg software to concatenate two video files and output the result as a single video file. Here's what each part of the command does:
@@ -471,13 +478,13 @@ def mixing_videos():
       -  `-y {output}` : This specifies the output file path and tells FFmpeg to overwrite it if it already exists.  `{output}`  is a variable that should be replaced with the actual file path.
       Overall, this command takes two input video files, speeds them up or slows them down as needed to make them fit into a 55-second duration, concatenates them into a single video file, and removes any audio streams from the output. The resulting video file will be saved at the specified output path.
     """
-@app.route('/ffmpeg-mixing-end', methods=['POST']) 
-def mixing_end(): 
+@app.route('/ffmpeg-mixing-end', methods=['POST'])
+def mixing_end():
     data = request.json 
     item_id = data['item_id']
     w = data['w']
     h = data['h']
-    input_1 = os.path.join(app.config['VIDEO_PATH'], f"mixed/{w}-{h}/{item_id}.mp4")
+    input_1 = os.path.join(app.config['VIDEO_PATH'], f"mixed-music/{w}-{h}/{item_id}.mp4")
     input_2 = os.path.join(app.config['VIDEO_PATH'], f"end/th-th/{w}-{h}.mp4")
     output_size = os.path.join(app.config['VIDEO_PATH'], f"mixed-end/{w}-{h}")
     output = os.path.join(output_size, f"{item_id}.mp4")
@@ -488,10 +495,9 @@ def mixing_end():
     if os.path.exists(input_1):
         cmd = f'ffmpeg -i {input_1} -i {input_2} -filter_complex "[0:v] [0:a] [1:v] [1:a] concat=n=2:v=1:a=1" {output}' 
         subprocess.run(cmd, shell=True)
+        return jsonify({'message': 'End Video mixed successfully!'})
     else:
         return jsonify({'no-video': 'Have No Mixed Video!'})
-    
-    return jsonify({'message': 'End Video mixed successfully!'})
 
 if __name__ == '__main__':
     app.run()
