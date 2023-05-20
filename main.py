@@ -160,10 +160,8 @@ def process_images():
      # Print the output files before returning the JSON response
     return jsonify({"output_files": output_files})
 def download_image(url, index, folder):
-    response = requests.get(url)
     image_file = os.path.join(folder, f'{index}.jpg')
-    with open(image_file, 'wb') as f:
-        f.write(response.content)
+    subprocess.run(['ffmpeg', '-i', url, '-y', image_file])
     return image_file
 def download_images_concurrently(urls, folder):
     image_files = []
